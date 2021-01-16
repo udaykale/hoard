@@ -44,6 +44,29 @@ fn create_and_read_cache() {
 }
 
 #[test]
+fn update_and_read_cache() {
+    let mut c = MaxSizeHashMapCache::new(5);
+    c.create(&String::from("1"), Test::new(10));
+    c.update(&String::from("1"), Test::new(9));
+    c.update(&String::from("2"), Test::new(11));
+    c.update(&String::from("3"), Test::new(12));
+    let value = c.read(&String::from("1"));
+
+    match value {
+        Ok(x) => {
+            match x {
+                Some(x) => {
+                    let value = x;
+                    assert_eq!(9, value.0)
+                }
+                None => panic!("No value was returned!!")
+            }
+        }
+        Err(_) => panic!("There was an unexpected error")
+    }
+}
+
+#[test]
 fn cache_size_exceeds() {
     let mut c = MaxSizeHashMapCache::new(5);
     c.create(&String::from("1"), Test::new(10));

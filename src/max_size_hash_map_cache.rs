@@ -18,9 +18,8 @@ impl<T> HashMapKeyValueStore<T> where T: Serializer + Deserializer + Clone {
 }
 
 impl<T> KeyValueStore<T> for HashMapKeyValueStore<T> where T: Serializer + Deserializer + Clone {
-    fn create(&mut self, key: &String, value: T) -> types::Result<T> {
-        let res = self.kvs.insert(key.to_owned(), value);
-        Ok(res)
+    fn len(&self) -> usize {
+        self.kvs.len()
     }
 
     fn read(&self, key: &String) -> types::Result<&T> {
@@ -28,8 +27,14 @@ impl<T> KeyValueStore<T> for HashMapKeyValueStore<T> where T: Serializer + Deser
         Ok(res)
     }
 
-    fn len(&self) -> usize {
-        self.kvs.len()
+    fn create(&mut self, key: &String, value: T) -> types::Result<T> {
+        let res = self.kvs.insert(key.to_owned(), value);
+        Ok(res)
+    }
+
+    fn update(&mut self, key: &String, value: T) -> types::Result<T> {
+        let res = self.kvs.insert(key.to_owned(), value);
+        Ok(res)
     }
 }
 
@@ -64,6 +69,14 @@ impl<T, U> EvictionPolicy<T, U> for MaxSizeEvictionPolicy
     }
 
     fn post_create(&mut self, key: &String, kvs: &U) -> types::Result<T> {
+        Ok(None)
+    }
+
+    fn pre_update(&mut self, key: &String, kvs: &U) -> types::Result<T> {
+        Ok(None)
+    }
+
+    fn post_update(&mut self, key: &String, kvs: &U) -> types::Result<T> {
         Ok(None)
     }
 }

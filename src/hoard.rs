@@ -5,10 +5,10 @@ use crate::types::{Error, Result};
 use crate::types;
 
 pub trait KeyValueStore<T> where T: Serializer + Deserializer + Clone {
-    fn create(&mut self, key: &String, value: T) -> Result<T>;
-    fn read(&self, key: &String) -> Result<&T>;
     fn len(&self) -> usize;
-    // fn update< T>(&mut self, key: String, value: T) -> Option<T> where T: CacheValue;
+    fn read(&self, key: &String) -> Result<&T>;
+    fn create(&mut self, key: &String, value: T) -> Result<T>;
+    fn update(&mut self, key: &String, value: T) -> Result<T>;
     // fn delete< T>(&mut self, key: &String) -> Option<T> where T: CacheValue;
 }
 
@@ -19,6 +19,8 @@ pub trait EvictionPolicy<T, U>
     fn post_read(&self, key: &String, kvs: &U) -> Result<&T>;
     fn pre_create(&mut self, key: &String, kvs: &U) -> Result<T>;
     fn post_create(&mut self, key: &String, kvs: &U) -> Result<T>;
+    fn pre_update(&mut self, key: &String, kvs: &U) -> Result<T>;
+    fn post_update(&mut self, key: &String, kvs: &U) -> Result<T>;
 }
 
 pub struct Cache<T, U, V>
@@ -72,6 +74,18 @@ impl<T, U, V> Cache<T, U, V>
         }
     }
 
-    // fn update(&mut self, key: String, value: T) -> Option<T>;
-    // fn delete(&mut self, key: &String) -> Option<T>;
+    pub fn update(&mut self, key: &String, value: T) -> Result<T> {
+        let pre_res = self.ep.pre_update(key, &self.kvs);
+        match pre_res {
+            Ok(_) => {
+                let value = self.kvs.update(key, value);
+                let post_res = self.ep.post_update(key, &self.kvs);
+                match post_res {
+                    Ok(_) => { value }
+                    Err(_) => { post_res }
+                }
+            }
+            Err(_) => { pre_res }
+        }
+    }
 }
