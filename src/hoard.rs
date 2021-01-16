@@ -7,7 +7,7 @@ use crate::types;
 pub trait KeyValueStore<T> where T: Serializer + Deserializer + Clone {
     fn create(&mut self, key: &String, value: T) -> Result<T>;
     fn read(&self, key: &String) -> Result<&T>;
-    fn size(&self) -> usize;
+    fn len(&self) -> usize;
     // fn update< T>(&mut self, key: String, value: T) -> Option<T> where T: CacheValue;
     // fn delete< T>(&mut self, key: &String) -> Option<T> where T: CacheValue;
 }
@@ -36,6 +36,10 @@ impl<T, U, V> Cache<T, U, V>
           V: EvictionPolicy<T, U> {
     pub fn new(kvs: U, ep: V) -> Cache<T, U, V> {
         Cache { kvs, ep, phantom: Default::default() }
+    }
+
+    pub fn len(&self) -> usize {
+        self.kvs.len()
     }
 
     pub fn read(&self, key: &String) -> Result<&T> {

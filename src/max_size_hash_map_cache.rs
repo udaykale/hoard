@@ -28,7 +28,7 @@ impl<T> KeyValueStore<T> for HashMapKeyValueStore<T> where T: Serializer + Deser
         Ok(res)
     }
 
-    fn size(&self) -> usize {
+    fn len(&self) -> usize {
         self.kvs.len()
     }
 }
@@ -57,10 +57,10 @@ impl<T, U> EvictionPolicy<T, U> for MaxSizeEvictionPolicy
     }
 
     fn pre_create(&mut self, key: &String, kvs: &U) -> types::Result<T> {
-        if self.max_size > kvs.size() {
+        if self.max_size > kvs.len() {
             return Ok(None);
         }
-        Err(Error { kind: SIZE, message: format!("Size of cache cannot exceed {}. Was {}", self.max_size, kvs.size()) })
+        Err(Error { kind: SIZE, message: format!("Size of cache cannot exceed {}. Was {}", self.max_size, kvs.len()) })
     }
 
     fn post_create(&mut self, key: &String, kvs: &U) -> types::Result<T> {
