@@ -1,10 +1,10 @@
 pub enum ErrorKind {
-    SQL
+    SIZE
 }
 
 pub struct Error {
-    pub(crate) kind: ErrorKind,
-    pub(crate) message: String,
+    pub kind: ErrorKind,
+    pub message: String,
 }
 
 pub type Result<T> = core::result::Result<Option<T>, Error>;
