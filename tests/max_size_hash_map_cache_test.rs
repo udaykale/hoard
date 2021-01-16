@@ -44,6 +44,23 @@ fn create_and_read_cache() {
 }
 
 #[test]
+fn create_existing_value() {
+    let mut c = MaxSizeHashMapCache::new(5);
+    c.create(&String::from("1"), Test::new(10));
+    let value = c.create(&String::from("1"), Test::new(11));
+
+    match value {
+        Ok(_) => {
+            panic!("There was an unexpected error")
+        }
+        Err(e) => {
+            assert!(matches!(e.kind, ErrorKind::ALREADY_EXISTS));
+            assert_eq!(e.message, "Value Already Exists");
+        }
+    }
+}
+
+#[test]
 fn update_and_read_cache() {
     let mut c = MaxSizeHashMapCache::new(5);
     c.create(&String::from("1"), Test::new(10));
@@ -67,6 +84,22 @@ fn update_and_read_cache() {
 }
 
 #[test]
+fn update_a_non_existing_value() {
+    let mut c = MaxSizeHashMapCache::new(5);
+    let value = c.update(&String::from("1"), Test::new(9));
+
+    match value {
+        Ok(_) => {
+            panic!("There was an unexpected error")
+        }
+        Err(e) => {
+            assert!(matches!(e.kind, ErrorKind::NO_EXISTING_VALUE));
+            assert_eq!(e.message, "Value Does not Exists");
+        }
+    }
+}
+
+#[test]
 fn cache_size_exceeds() {
     let mut c = MaxSizeHashMapCache::new(5);
     c.create(&String::from("1"), Test::new(10));
@@ -83,7 +116,7 @@ fn cache_size_exceeds() {
         }
         Err(e) => {
             assert!(matches!(e.kind, ErrorKind::SIZE));
-            assert_eq!(e.message, "Size of cache cannot exceed 5. Was 5");
+            assert_eq!(e.message, "Size of cache cannot exceed 5");
         }
     }
 }

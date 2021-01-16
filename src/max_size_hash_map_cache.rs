@@ -5,7 +5,7 @@ use crate::{hoard, types};
 use crate::hoard::{Cache, EvictionPolicy, KeyValueStore};
 use crate::serde::{Deserializer, Serializer};
 use crate::types::Error;
-use crate::types::ErrorKind::SIZE;
+use crate::types::ErrorKind::{ALREADY_EXISTS, SIZE, NO_EXISTING_VALUE};
 
 pub struct HashMapKeyValueStore<T> {
     kvs: HashMap<String, T>
@@ -28,11 +28,19 @@ impl<T> KeyValueStore<T> for HashMapKeyValueStore<T> where T: Serializer + Deser
     }
 
     fn create(&mut self, key: &String, value: T) -> types::Result<T> {
+        if self.kvs.contains_key(key) {
+            return Err(Error { kind: ALREADY_EXISTS, message: format!("Value Already Exists") });
+        }
+
         let res = self.kvs.insert(key.to_owned(), value);
         Ok(res)
     }
 
     fn update(&mut self, key: &String, value: T) -> types::Result<T> {
+        if !self.kvs.contains_key(key) {
+            return Err(Error { kind: NO_EXISTING_VALUE, message: format!("Value Does not Exists") });
+        }
+
         let res = self.kvs.insert(key.to_owned(), value);
         Ok(res)
     }
@@ -65,7 +73,7 @@ impl<T, U> EvictionPolicy<T, U> for MaxSizeEvictionPolicy
         if self.max_size > kvs.len() {
             return Ok(None);
         }
-        Err(Error { kind: SIZE, message: format!("Size of cache cannot exceed {}. Was {}", self.max_size, kvs.len()) })
+        Err(Error { kind: SIZE, message: format!("Size of cache cannot exceed {}", self.max_size) })
     }
 
     fn post_create(&mut self, key: &String, kvs: &U) -> types::Result<T> {
