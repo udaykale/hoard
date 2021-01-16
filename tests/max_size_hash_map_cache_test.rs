@@ -23,10 +23,9 @@ impl Clone for Test {
 
 #[test]
 fn create_and_read_cache() {
-    let mut c = MaxSizeHashMapCache::new(5);
+    let mut c = MaxSizeHashMapCache::new(2);
     c.create(&String::from("1"), Test::new(10));
-    c.create(&String::from("2"), Test::new(11));
-    c.create(&String::from("3"), Test::new(12));
+    c.create(&String::from("2"), Test::new(12));
     let value = c.read(&String::from("2"));
 
     match value {
@@ -34,7 +33,7 @@ fn create_and_read_cache() {
             match x {
                 Some(x) => {
                     let value = x;
-                    assert_eq!(11, value.0)
+                    assert_eq!(12, value.0)
                 }
                 None => panic!("No value was returned!!")
             }
@@ -65,8 +64,6 @@ fn update_and_read_cache() {
     let mut c = MaxSizeHashMapCache::new(5);
     c.create(&String::from("1"), Test::new(10));
     c.update(&String::from("1"), Test::new(9));
-    c.update(&String::from("2"), Test::new(11));
-    c.update(&String::from("3"), Test::new(12));
     let value = c.read(&String::from("1"));
 
     match value {
@@ -101,12 +98,9 @@ fn update_a_non_existing_value() {
 
 #[test]
 fn cache_size_exceeds() {
-    let mut c = MaxSizeHashMapCache::new(5);
+    let mut c = MaxSizeHashMapCache::new(2);
     c.create(&String::from("1"), Test::new(10));
     c.create(&String::from("2"), Test::new(10));
-    c.create(&String::from("3"), Test::new(10));
-    c.create(&String::from("4"), Test::new(10));
-    c.create(&String::from("5"), Test::new(10));
 
     let value = c.create(&String::from("6"), Test::new(10));
 
@@ -116,23 +110,24 @@ fn cache_size_exceeds() {
         }
         Err(e) => {
             assert!(matches!(e.kind, ErrorKind::SIZE));
-            assert_eq!(e.message, "Size of cache cannot exceed 5");
+            assert_eq!(e.message, "Size of cache cannot exceed 2");
         }
     }
 }
 
 #[test]
 fn check_cache_size() {
-    let mut c = MaxSizeHashMapCache::new(5);
+    let mut c = MaxSizeHashMapCache::new(2);
     c.create(&String::from("1"), Test::new(10));
 
     assert_eq!(c.len(), 1);
 
     c.create(&String::from("2"), Test::new(10));
     c.create(&String::from("3"), Test::new(10));
-    c.create(&String::from("4"), Test::new(10));
-    c.create(&String::from("5"), Test::new(10));
-    c.create(&String::from("6"), Test::new(10));
 
-    assert_eq!(c.len(), 5);
+    assert_eq!(c.len(), 2);
+
+    c.update(&String::from("3"), Test::new(10));
+
+    assert_eq!(c.len(), 2);
 }
