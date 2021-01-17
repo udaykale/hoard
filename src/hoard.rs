@@ -1,15 +1,14 @@
 use std::marker::PhantomData;
 
 use crate::serde::{Deserializer, Serializer};
-use crate::types::{Error, Result};
-use crate::types;
+use crate::types::Result;
 
 pub trait KeyValueStore<T> where T: Serializer + Deserializer + Clone {
     fn len(&self) -> usize;
     fn read(&self, key: &String) -> Result<&T>;
     fn create(&mut self, key: &String, value: T) -> Result<T>;
     fn update(&mut self, key: &String, value: T) -> Result<T>;
-    // fn delete< T>(&mut self, key: &String) -> Option<T> where T: CacheValue;
+    fn delete(&mut self, key: &String) -> Result<T>;
 }
 
 pub trait EvictionPolicy<T, U>
@@ -21,6 +20,8 @@ pub trait EvictionPolicy<T, U>
     fn post_create(&mut self, key: &String, kvs: &U) -> Result<T>;
     fn pre_update(&mut self, key: &String, kvs: &U) -> Result<T>;
     fn post_update(&mut self, key: &String, kvs: &U) -> Result<T>;
+    fn pre_delete(&mut self, key: &String, kvs: &U) -> Result<T>;
+    fn post_delete(&mut self, key: &String, kvs: &U) -> Result<T>;
 }
 
 pub struct Cache<T, U, V>
@@ -80,6 +81,21 @@ impl<T, U, V> Cache<T, U, V>
             Ok(_) => {
                 let value = self.kvs.update(key, value);
                 let post_res = self.ep.post_update(key, &self.kvs);
+                match post_res {
+                    Ok(_) => { value }
+                    Err(_) => { post_res }
+                }
+            }
+            Err(_) => { pre_res }
+        }
+    }
+
+    pub fn delete(&mut self, key: &String) -> Result<T> {
+        let pre_res = self.ep.pre_delete(key, &self.kvs);
+        match pre_res {
+            Ok(_) => {
+                let value = self.kvs.delete(key);
+                let post_res = self.ep.post_delete(key, &self.kvs);
                 match post_res {
                     Ok(_) => { value }
                     Err(_) => { post_res }

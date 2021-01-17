@@ -97,6 +97,31 @@ fn update_a_non_existing_value() {
 }
 
 #[test]
+fn delete_and_read_cache() {
+    let mut c = MaxSizeHashMapCache::new(5);
+    c.create(&String::from("1"), Test::new(1));
+    c.create(&String::from("2"), Test::new(2));
+    c.delete(&String::from("1"));
+    let value = c.read(&String::from("1"));
+
+    match value {
+        Ok(x) => {
+            match x {
+                Some(_) => {
+                    panic!("No value should have been returned")
+                }
+                None => {}
+            }
+        }
+        Err(_) => panic!("There was an unexpected error")
+    }
+}
+
+// TODO Test cases
+//  Delete Non existing value
+//  Read Non existing value
+
+#[test]
 fn cache_size_exceeds() {
     let mut c = MaxSizeHashMapCache::new(2);
     c.create(&String::from("1"), Test::new(10));
