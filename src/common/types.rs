@@ -1,5 +1,7 @@
 pub enum ErrorKind {
-    SIZE
+    Size,
+    AlreadyExists,
+    NoExistingValue,
 }
 
 pub struct Error {
