@@ -22,6 +22,10 @@ impl<T, U, V> Cache<T, U, V>
         Cache { kvs, ep, phantom: Default::default() }
     }
 
+    pub fn len() -> usize {
+        return 0;
+    }
+
     pub fn read(&self, key: &String) -> Result<&T> {
         let pre_res = self.ep.pre_read(key, &self.kvs);
         match pre_res {

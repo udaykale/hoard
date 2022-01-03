@@ -1,6 +1,7 @@
 use common::serde::{Deserializer, Serializer};
 use common::types::Result;
 
+
 pub trait KeyValueStore<T> where T: Serializer + Deserializer + Clone {
     fn len(&self) -> usize;
     fn read(&self, key: &String) -> Result<&T>;
