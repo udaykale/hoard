@@ -1,5 +1,6 @@
-pub mod cache;
-pub mod key_value_store;
-pub mod serde;
+pub mod key;
 pub mod types;
-pub mod evicition_policy;
+pub mod key_value_store;
+pub mod eviction_policy;
+pub mod cache;
+pub mod value;

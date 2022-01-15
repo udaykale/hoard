@@ -1,7 +1,6 @@
 pub enum ErrorKind {
-    Size,
-    AlreadyExists,
-    NoExistingValue,
+    UnableToDeserialize,
+    UnableToSerialize,
 }
 
 pub struct Error {
