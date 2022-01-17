@@ -5,8 +5,8 @@ use common::cache::Cache;
 use common::key::Key;
 use common::types::{Error, ErrorKind, Result};
 use common::value::Value;
-use hashmap_cache::hash_map_key_value_store::HashmapKeyValueStore;
-use hashmap_cache::max_size_eviction_policy::MaxSizeEvictionPolicy;
+use eviction_policy::max_size_eviction_policy::MaxSizeEvictionPolicy;
+use key_value_store::hash_map_key_value_store::HashmapKeyValueStore;
 
 pub struct MaxSizeHashMapCache<K, V> {
     k: PhantomData<K>,
@@ -76,7 +76,7 @@ fn test() {
 
     impl Clone for TestValue {
         fn clone(&self) -> Self {
-            todo!()
+            TestValue { val0: self.val0, val1: self.val1.clone() }
         }
     }
 
