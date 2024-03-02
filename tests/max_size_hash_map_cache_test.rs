@@ -1,8 +1,8 @@
-use hoard::hoard::{Cache, EvictionPolicy, KeyValueStore};
+use serde::{Deserialize, Serialize};
 use hoard::max_size_hash_map_cache::MaxSizeHashMapCache;
-use hoard::serde::{Deserializer, Serializer};
-use hoard::types::{Error, ErrorKind};
+use hoard::types::{ErrorKind};
 
+#[derive(Deserialize, Serialize, Clone)]
 struct Test(usize);
 
 impl Test {
@@ -11,21 +11,11 @@ impl Test {
     }
 }
 
-impl Deserializer for Test {}
-
-impl Serializer for Test {}
-
-impl Clone for Test {
-    fn clone(&self) -> Self {
-        Test::new(self.0)
-    }
-}
-
 #[test]
 fn create_and_read_cache() {
     let key = &String::from("10");
     let mut c = MaxSizeHashMapCache::new(5);
-    c.create(&key, Test::new(10));
+    let _ = c.create(&key, Test::new(10));
     let value = c.read(&key);
 
     match value {
@@ -46,16 +36,16 @@ fn create_and_read_cache() {
 fn cache_size_exceeds() {
     let key = &String::from("10");
     let mut c = MaxSizeHashMapCache::new(5);
-    c.create(&String::from("1"), Test::new(10));
-    c.create(&String::from("2"), Test::new(10));
-    c.create(&String::from("3"), Test::new(10));
-    c.create(&String::from("4"), Test::new(10));
-    c.create(&String::from("5"), Test::new(10));
+    let _ = c.create(&String::from("1"), Test::new(10));
+    let _ = c.create(&String::from("2"), Test::new(10));
+    let _ = c.create(&String::from("3"), Test::new(10));
+    let _ = c.create(&String::from("4"), Test::new(10));
+    let _ = c.create(&String::from("5"), Test::new(10));
 
     let value = c.create(&key, Test::new(10));
 
     match value {
-        Ok(x) => {
+        Ok(_) => {
             panic!("Cache should have maxed out.")
         }
         Err(e) => {

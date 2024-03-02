@@ -1,10 +1,9 @@
 use std::marker::PhantomData;
+use serde::{Deserialize, Serialize};
 
-use crate::serde::{Deserializer, Serializer};
-use crate::types::{Error, Result};
-use crate::types;
+use crate::types::Result;
 
-pub trait KeyValueStore<T> where T: Serializer + Deserializer + Clone {
+pub trait KeyValueStore<'de, T> where T: Serialize + Deserialize<'de> + Clone {
     fn create(&mut self, key: &String, value: T) -> Result<T>;
     fn read(&self, key: &String) -> Result<&T>;
     fn size(&self) -> usize;
@@ -12,30 +11,31 @@ pub trait KeyValueStore<T> where T: Serializer + Deserializer + Clone {
     // fn delete< T>(&mut self, key: &String) -> Option<T> where T: CacheValue;
 }
 
-pub trait EvictionPolicy<T, U>
-    where T: Serializer + Deserializer + Clone,
-          U: KeyValueStore<T> {
+pub trait EvictionPolicy<'de, T: 'de, U: 'de>
+    where T: Serialize + Deserialize<'de> + Clone,
+          U: KeyValueStore<'de, T> {
     fn pre_read(&self, key: &String, kvs: &U) -> Result<&T>;
     fn post_read(&self, key: &String, kvs: &U) -> Result<&T>;
     fn pre_create(&mut self, key: &String, kvs: &U) -> Result<T>;
     fn post_create(&mut self, key: &String, kvs: &U) -> Result<T>;
 }
 
-pub struct Cache<T, U, V>
-    where T: Serializer + Deserializer + Clone,
-          U: KeyValueStore<T>,
-          V: EvictionPolicy<T, U> {
+pub struct Cache<'de, T: 'de, U: 'de, V: 'de>
+    where T: Serialize + Deserialize<'de> + Clone,
+          U: KeyValueStore<'de, T>,
+          V: EvictionPolicy<'de, T, U> {
     kvs: U,
     ep: V,
     phantom: PhantomData<T>,
+    _phantom: PhantomData<&'de ()>,
 }
 
-impl<T, U, V> Cache<T, U, V>
-    where T: Serializer + Deserializer + Clone,
-          U: KeyValueStore<T>,
-          V: EvictionPolicy<T, U> {
-    pub fn new(kvs: U, ep: V) -> Cache<T, U, V> {
-        Cache { kvs, ep, phantom: Default::default() }
+impl<'de, T, U, V> Cache<'de, T, U, V>
+    where T: Serialize + Deserialize<'de> + Clone,
+          U: KeyValueStore<'de, T>,
+          V: EvictionPolicy<'de, T, U> {
+    pub fn new(kvs: U, ep: V) -> Cache<'de, T, U, V> {
+        Cache { kvs, ep, phantom: Default::default(), _phantom: Default::default() }
     }
 
     pub fn read(&self, key: &String) -> Result<&T> {

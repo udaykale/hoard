@@ -1,23 +1,23 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use serde::{Deserialize, Serialize};
 
-use crate::{hoard, types};
+use crate::{types};
 use crate::hoard::{Cache, EvictionPolicy, KeyValueStore};
-use crate::serde::{Deserializer, Serializer};
 use crate::types::Error;
 use crate::types::ErrorKind::SIZE;
 
 pub struct HashMapKeyValueStore<T> {
-    kvs: HashMap<String, T>
+    kvs: HashMap<String, T>,
 }
 
-impl<T> HashMapKeyValueStore<T> where T: Serializer + Deserializer + Clone {
+impl<'de, T: 'de> HashMapKeyValueStore<T> where T: Serialize + Deserialize<'de> + Clone {
     fn new() -> HashMapKeyValueStore<T> {
         HashMapKeyValueStore { kvs: HashMap::new() }
     }
 }
 
-impl<T> KeyValueStore<T> for HashMapKeyValueStore<T> where T: Serializer + Deserializer + Clone {
+impl<'de, T: 'de> KeyValueStore<'de, T> for HashMapKeyValueStore<T> where T: Serialize + Deserialize<'de> + Clone {
     fn create(&mut self, key: &String, value: T) -> types::Result<T> {
         let res = self.kvs.insert(key.to_owned(), value);
         Ok(res)
@@ -45,9 +45,8 @@ impl MaxSizeEvictionPolicy {
     }
 }
 
-impl<T, U> EvictionPolicy<T, U> for MaxSizeEvictionPolicy
-    where T: Serializer + Deserializer + Clone,
-          U: KeyValueStore<T> {
+impl<'de, T: 'de, U: 'de> EvictionPolicy<'de, T, U> for MaxSizeEvictionPolicy
+    where T: Serialize + Deserialize<'de> + Clone, U: KeyValueStore<'de, T> + 'de {
     fn pre_read(&self, key: &String, kvs: &U) -> types::Result<&T> {
         Ok(None)
     }
@@ -68,12 +67,13 @@ impl<T, U> EvictionPolicy<T, U> for MaxSizeEvictionPolicy
     }
 }
 
-pub struct MaxSizeHashMapCache<T> where T: Serializer + Deserializer + Clone, {
-    phantom: PhantomData<T>
+#[derive(Serialize, Deserialize)]
+pub struct MaxSizeHashMapCache<T> where T: Clone {
+    phantom: PhantomData<T>,
 }
 
-impl<T> MaxSizeHashMapCache<T> where T: Serializer + Deserializer + Clone, {
-    pub fn new(max_size: usize) -> Cache<T, HashMapKeyValueStore<T>, MaxSizeEvictionPolicy> {
+impl<'de, T> MaxSizeHashMapCache<T> where T: Serialize + Deserialize<'de> + Clone, {
+    pub fn new(max_size: usize) -> Cache<'de, T, HashMapKeyValueStore<T>, MaxSizeEvictionPolicy> {
         Cache::new(HashMapKeyValueStore::new(), MaxSizeEvictionPolicy::new(max_size))
     }
 }
