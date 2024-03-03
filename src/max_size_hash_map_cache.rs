@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 
@@ -7,23 +8,30 @@ use crate::hoard::{Cache, EvictionPolicy, KeyValueStore};
 use crate::types::Error;
 use crate::types::ErrorKind::SIZE;
 
-pub struct HashMapKeyValueStore<V> {
-    kvs: HashMap<String, V>,
+pub struct HashMapKeyValueStore<'de, K, V>
+    where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
+          V: Serialize + Deserialize<'de> + Clone {
+    kvs: HashMap<K, V>,
+    _de: PhantomData<&'de ()>,
 }
 
-impl<'de, V> HashMapKeyValueStore<V> where V: Serialize + Deserialize<'de> + Clone {
-    fn new() -> HashMapKeyValueStore<V> {
-        HashMapKeyValueStore { kvs: HashMap::new() }
+impl<'de, K: 'de, V: 'de> HashMapKeyValueStore<'de, K, V>
+    where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
+          V: Serialize + Deserialize<'de> + Clone {
+    fn new() -> HashMapKeyValueStore<'de, K, V> {
+        HashMapKeyValueStore { _de: Default::default(), kvs: HashMap::new() }
     }
 }
 
-impl<'de, V> KeyValueStore<'de, V> for HashMapKeyValueStore<V> where V: Serialize + Deserialize<'de> + Clone {
-    fn create(&mut self, key: &String, value: V) -> types::Result<V> {
+impl<'de, K, V> KeyValueStore<'de, K, V> for HashMapKeyValueStore<'de, K, V>
+    where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
+          V: Serialize + Deserialize<'de> + Clone {
+    fn create(&mut self, key: &K, value: V) -> types::Result<V> {
         let res = self.kvs.insert(key.to_owned(), value);
         Ok(res)
     }
 
-    fn read(&self, key: &String) -> types::Result<&V> {
+    fn read(&self, key: &K) -> types::Result<&V> {
         let res = self.kvs.get(key);
         Ok(res)
     }
@@ -45,35 +53,39 @@ impl MaxSizeEvictionPolicy {
     }
 }
 
-impl<'de, V, U> EvictionPolicy<'de, V, U> for MaxSizeEvictionPolicy
-    where V: Serialize + Deserialize<'de> + Clone, U: KeyValueStore<'de, V> + 'de {
-    fn pre_read(&self, key: &String, kvs: &U) -> types::Result<&V> {
+impl<'de, K, V, U> EvictionPolicy<'de, K, V, U> for MaxSizeEvictionPolicy
+    where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
+          V: Serialize + Deserialize<'de> + Clone,
+          U: KeyValueStore<'de, K, V> {
+    fn pre_read(&self, key: &K, kvs: &U) -> types::Result<&V> {
         Ok(None)
     }
 
-    fn post_read(&self, key: &String, kvs: &U) -> types::Result<&V> {
+    fn post_read(&self, key: &K, kvs: &U) -> types::Result<&V> {
         Ok(None)
     }
 
-    fn pre_create(&mut self, key: &String, kvs: &U) -> types::Result<V> {
+    fn pre_create(&mut self, key: &K, kvs: &U) -> types::Result<V> {
         if self.max_size > kvs.size() {
             return Ok(None);
         }
         Err(Error { kind: SIZE, message: format!("Size of cache cannot exceed {}. Was {}", self.max_size, kvs.size()) })
     }
 
-    fn post_create(&mut self, key: &String, kvs: &U) -> types::Result<V> {
+    fn post_create(&mut self, key: &K, kvs: &U) -> types::Result<V> {
         Ok(None)
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct MaxSizeHashMapCache<V> where V: Clone {
-    phantom: PhantomData<V>,
+pub struct MaxSizeHashMapCache<K, V> where V: Clone {
+    _v: PhantomData<V>,
+    _k: PhantomData<K>,
 }
 
-impl<'de, V> MaxSizeHashMapCache<V> where V: Serialize + Deserialize<'de> + Clone, {
-    pub fn new(max_size: usize) -> Cache<'de, V, HashMapKeyValueStore<V>, MaxSizeEvictionPolicy> {
+impl<'de, K, V> MaxSizeHashMapCache<K, V>
+    where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
+          V: Serialize + Deserialize<'de> + Clone {
+    pub fn new(max_size: usize) -> Cache<'de, K, V, HashMapKeyValueStore<'de, K, V>, MaxSizeEvictionPolicy> {
         Cache::new(HashMapKeyValueStore::new(), MaxSizeEvictionPolicy::new(max_size))
     }
 }
