@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use serde::{Deserialize, Serialize};
 
@@ -8,22 +8,22 @@ use crate::hoard::{Cache, EvictionPolicy, KeyValueStore};
 use crate::types::Error;
 use crate::types::ErrorKind::SIZE;
 
-pub struct HashMapKeyValueStore<'de, K, V>
+pub struct CoLocatedKeyValueStore<'de, K, V>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           V: Serialize + Deserialize<'de> + Clone {
     kvs: HashMap<K, V>,
     _de: PhantomData<&'de ()>,
 }
 
-impl<'de, K: 'de, V: 'de> HashMapKeyValueStore<'de, K, V>
+impl<'de, K: 'de, V: 'de> CoLocatedKeyValueStore<'de, K, V>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           V: Serialize + Deserialize<'de> + Clone {
-    fn new() -> HashMapKeyValueStore<'de, K, V> {
-        HashMapKeyValueStore { _de: Default::default(), kvs: HashMap::new() }
+    fn new() -> CoLocatedKeyValueStore<'de, K, V> {
+        CoLocatedKeyValueStore { _de: Default::default(), kvs: HashMap::new() }
     }
 }
 
-impl<'de, K, V> KeyValueStore<'de, K, V> for HashMapKeyValueStore<'de, K, V>
+impl<'de, K, V> KeyValueStore<'de, K, V> for CoLocatedKeyValueStore<'de, K, V>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           V: Serialize + Deserialize<'de> + Clone {
     fn create(&mut self, key: &K, value: V) -> types::Result<V> {
@@ -41,19 +41,25 @@ impl<'de, K, V> KeyValueStore<'de, K, V> for HashMapKeyValueStore<'de, K, V>
     }
 }
 
-pub struct MaxSizeEvictionPolicy {
+pub struct FIFOEvictionPolicy {
     max_size: usize,
 }
 
-impl MaxSizeEvictionPolicy {
-    fn new(max_size: usize) -> MaxSizeEvictionPolicy {
-        MaxSizeEvictionPolicy {
+impl FIFOEvictionPolicy {
+    // Elements are evicted in the same order as they come in.
+    // When a put call is made for a new element (and assuming that the max limit is reached for the memory store)
+    // the element that was placed first (First-In) in the store is the candidate for eviction (First-Out)
+    fn new(max_size: usize) -> FIFOEvictionPolicy {
+        FIFOEvictionPolicy {
             max_size,
         }
     }
+    fn default() -> FIFOEvictionPolicy {
+        FIFOEvictionPolicy::new(1024)
+    }
 }
 
-impl<'de, K, V, U> EvictionPolicy<'de, K, V, U> for MaxSizeEvictionPolicy
+impl<'de, K, V, U> EvictionPolicy<'de, K, V, U> for FIFOEvictionPolicy
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           V: Serialize + Deserialize<'de> + Clone,
           U: KeyValueStore<'de, K, V> {
@@ -77,16 +83,16 @@ impl<'de, K, V, U> EvictionPolicy<'de, K, V, U> for MaxSizeEvictionPolicy
     }
 }
 
-pub struct MaxSizeHashMapCache<K, V> where V: Clone {
+pub struct CoLocatedFIFOCache<K, V> where V: Clone {
     _v: PhantomData<V>,
     _k: PhantomData<K>,
 }
 
-impl<'de, K, V> MaxSizeHashMapCache<K, V>
+impl<'de, K, V> CoLocatedFIFOCache<K, V>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           V: Serialize + Deserialize<'de> + Clone {
-    pub fn new(max_size: usize) -> Cache<'de, K, V, HashMapKeyValueStore<'de, K, V>, MaxSizeEvictionPolicy> {
-        Cache::new(HashMapKeyValueStore::new(), MaxSizeEvictionPolicy::new(max_size))
+    pub fn new(max_size: usize) -> Cache<'de, K, V, CoLocatedKeyValueStore<'de, K, V>, FIFOEvictionPolicy> {
+        Cache::new(CoLocatedKeyValueStore::new(), FIFOEvictionPolicy::new(max_size))
     }
 }
 
