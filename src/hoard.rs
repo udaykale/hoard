@@ -6,7 +6,7 @@ use crate::types::Result;
 
 pub trait KeyValueStore<'de, K, V>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
-          V: Serialize + Deserialize<'de> + Clone {
+          V: Serialize + Deserialize<'de> + Clone + Eq + Hash {
     fn create(&mut self, key: &K, value: V) -> Result<V>;
     fn read(&self, key: &K) -> Result<&V>;
     fn size(&self) -> usize;
@@ -16,7 +16,7 @@ pub trait KeyValueStore<'de, K, V>
 
 pub trait EvictionPolicy<'de, K, V, U>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
-          V: Serialize + Deserialize<'de> + Clone,
+          V: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           U: KeyValueStore<'de, K, V> {
     fn pre_read(&self, key: &K, kvs: &U) -> Result<&V>;
     fn post_read(&self, key: &K, kvs: &U) -> Result<&V>;
@@ -26,7 +26,7 @@ pub trait EvictionPolicy<'de, K, V, U>
 
 pub struct Cache<'de, K: 'de, V: 'de, U, E>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
-          V: Serialize + Deserialize<'de> + Clone,
+          V: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           U: KeyValueStore<'de, K, V>,
           E: EvictionPolicy<'de, K, V, U> {
     _k: PhantomData<K>,
@@ -38,7 +38,7 @@ pub struct Cache<'de, K: 'de, V: 'de, U, E>
 
 impl<'de, K, V, U, E> Cache<'de, K, V, U, E>
     where K: Serialize + Deserialize<'de> + Clone + Eq + Hash,
-          V: Serialize + Deserialize<'de> + Clone,
+          V: Serialize + Deserialize<'de> + Clone + Eq + Hash,
           U: KeyValueStore<'de, K, V>,
           E: EvictionPolicy<'de, K, V, U> {
     pub fn new(kvs: U, ep: E) -> Cache<'de, K, V, U, E> {

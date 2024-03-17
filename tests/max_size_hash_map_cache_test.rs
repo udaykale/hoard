@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 use hoard::co_located_fifo_cache::CoLocatedFIFOCache;
 use hoard::types::ErrorKind;
 
-#[derive(Deserialize, Serialize, Clone)]
-struct TestValue(usize);
-
 #[derive(Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
 struct TestKey(String);
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+struct TestValue(usize);
 
 
 impl TestValue {
@@ -19,7 +19,7 @@ impl TestValue {
 #[test]
 fn create_and_read_cache() {
     let key = TestKey(String::from("10"));
-    let mut c = CoLocatedFIFOCache::new(5);
+    let mut c = CoLocatedFIFOCache::without_broker(5);
     let _ = c.create(&key, TestValue::new(10));
     let value = c.read(&key);
 
@@ -40,7 +40,7 @@ fn create_and_read_cache() {
 #[test]
 fn cache_size_exceeds() {
     let key = TestKey(String::from("10"));
-    let mut c = CoLocatedFIFOCache::new(5);
+    let mut c = CoLocatedFIFOCache::without_broker(5);
     let _ = c.create(&TestKey(String::from("1")), TestValue::new(10));
     let _ = c.create(&TestKey(String::from("2")), TestValue::new(10));
     let _ = c.create(&TestKey(String::from("3")), TestValue::new(10));
